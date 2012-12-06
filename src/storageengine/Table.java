@@ -15,6 +15,14 @@ public class Table implements Serializable {
 		this.rows = new ArrayList<String[]>();
 	}
 
+	public ArrayList<String[]> getRows() {
+		return rows;
+	}
+	
+	public String[] getColumn() {
+		return column;
+	}
+	
 	public void addRecord(String[] row) {
 		rows.add(row);
 	}
