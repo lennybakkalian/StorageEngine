@@ -2,13 +2,17 @@ package storageengine.query;
 
 import java.util.ArrayList;
 
-import storageengine.Utils;
 import storageengine.exceptions.QueryParseException;
+import storageengine.query.ComparePair.CompareType;
 import storageengine.query.Query.QueryType;
 
 public class QueryParser {
 
 	private String queryStr;
+
+	public static enum Condition {
+		AND, OR
+	}
 
 	public QueryParser(String queryStr) {
 		this.queryStr = queryStr;
@@ -19,15 +23,17 @@ public class QueryParser {
 		return qParts.length > 2 && qParts[2].equalsIgnoreCase("where");
 	}
 
-	public String[] getWhereParts() throws QueryParseException {
+	public ArrayList<ComparePair> getWhereParts() throws QueryParseException {
 		if (!isWhereClause())
 			throw new QueryParseException("cant parse 'where' parts, because query isnt a 'where' statement");
 		// read char for char to check if commas are in a string
-		ArrayList<String> whereParts = new ArrayList<String>();
+		ArrayList<ComparePair> whereParts = new ArrayList<ComparePair>();
 		String[] chars = queryStr.split(" ")[3].split("");
 		boolean stringMode = false;
 		String currentKey = null, currentValue = null;
 		String splitStr = "";
+		CompareType currentCompareType = null;
+		Condition currentCondition = null;
 		for (int i = 0; i < chars.length; i++) {
 			String c = chars[i];
 			if (stringMode) {
@@ -43,23 +49,54 @@ public class QueryParser {
 						// end string mode
 						stringMode = false;
 						// save where part
-						whereParts.add(currentKey + "=" + currentValue);
+						ComparePair cp = new ComparePair(currentCompareType, currentKey, currentValue, null);
+						whereParts.add(cp);
+						// TODO: rem me
+						//System.out.println(currentCompareType + " : " + currentKey + " : " + currentValue);
 						currentKey = null;
 						currentValue = null;
 						// check if there is a next condition
 						// if not: ignore rest
-						if (chars.length <= i + 1 || !chars[i + 1].equals(","))
+						if (chars.length <= i + 1)
 							break;
+						switch (chars[i + 1]) {
+						case "&":
+							currentCondition = Condition.AND;
+							break;
+						case "/":
+							currentCondition = Condition.OR;
+							break;
+						default:
+							// invalid char, throw parse exception
+							throw new QueryParseException(
+									"invalid condition after compare '" + chars[i + 1] + "' at: " + queryStr);
+						}
+						// update condition
+						cp.setConditionAfter(currentCondition);
 						i++;
 					}
 				} else {
 					currentValue += c;
 				}
 			} else {
-				if (c.equals("=")) {
+				if (c.equals("=") || c.equals("!") || c.equals("<") || c.equals(">")) {
+					switch (c) {
+					case "=":
+						currentCompareType = CompareType.EQUAL;
+						break;
+					case "!":
+						currentCompareType = CompareType.NOT_EQUAL;
+						break;
+					case "<":
+						currentCompareType = CompareType.SMALLER_THAN;
+						break;
+					case ">":
+						currentCompareType = CompareType.GREATER_THAN;
+						break;
+					}
 					// check if currentKey isnt null
 					if (currentKey == null)
-						throw new QueryParseException("'=' defined where key isnt defined: " + queryStr);
+						throw new QueryParseException("key isnt defined at: " + queryStr);
 					// check if next char is " or '
 					if (chars.length <= i + 1)
 						throw new QueryParseException("empty value after '=' at: " + currentKey);
@@ -73,7 +110,7 @@ public class QueryParser {
 						// skip ' or " character
 						i++;
 					} else {
-						throw new QueryParseException("expexted ' or \" after equal char at: " + queryStr);
+						throw new QueryParseException("expexted ' or \" after compare char at: " + queryStr);
 					}
 				} else {
 					// add current char to currentKey
@@ -88,7 +125,7 @@ public class QueryParser {
 			else
 				throw new QueryParseException("expected " + splitStr + " to end the string from the key:" + currentKey
 						+ " value:" + currentValue);
-		return Utils.dynArrToFixedStrArr(whereParts);
+		return whereParts;
 	}
 
 	public Query parse() throws QueryParseException {

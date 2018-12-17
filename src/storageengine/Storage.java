@@ -39,7 +39,7 @@ public class Storage {
 	public StorageObject getStorageObject() {
 		return storageObject;
 	}
-	
+
 	public void close() {
 		open = false;
 		updateThread.interrupt();
@@ -73,12 +73,16 @@ public class Storage {
 
 	private class UpdateThread extends Thread {
 		public void run() {
+			String oldData = storageObject.getDataRaw();
 			while (!interrupted() && open) {
 				synchronized (this) {
 					try {
 						sleep(5000);
-						// save current storageObject file
-						save();
+						// save current storageObject file if anything changed
+						if (!oldData.equals(storageObject.getDataRaw())) {
+							oldData = storageObject.getDataRaw();
+							save();
+						}
 					} catch (Exception e) {
 						e.printStackTrace();
 					}
