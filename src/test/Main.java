@@ -17,7 +17,7 @@ public class Main {
 		try {
 			// QueryParser qp = new QueryParser("select test where abc='d',u='a',d='test'");
 			// System.out.println(Arrays.toString(qp.getWhereParts()));
-			File soFile = new File("C:\\Users\\lenny\\Documents\\workspaceV2\\storage.txt");
+			File soFile = new File("storage.txt");
 			Storage s;
 			if (soFile.exists()) {
 				s = new Storage(soFile);

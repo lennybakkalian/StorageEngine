@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
 import java.nio.file.FileAlreadyExistsException;
 
 import storageengine.exceptions.QueryExecuteException;
@@ -13,6 +14,7 @@ import storageengine.exceptions.QueryParseException;
 import storageengine.query.Query;
 import storageengine.query.QueryParser;
 import storageengine.query.ResultSet;
+import storageengine.socket.ServerThread;
 
 public class Storage {
 
@@ -21,6 +23,9 @@ public class Storage {
 	private boolean open = false;
 	private UpdateThread updateThread;
 	public boolean debug = false;
+	public ServerSocket server;
+	public int port;
+	private ServerThread serverThread;
 
 	public Storage(File f) throws Exception {
 		this.f = f;
@@ -78,6 +83,14 @@ public class Storage {
 	public void debug(String msg) {
 		if (debug)
 			System.out.println("[DEBUG] " + msg);
+	}
+
+	public void startServer(int port) throws Exception {
+		if (server != null && !server.isClosed())
+			throw new Exception("server already running");
+		this.port = port;
+		serverThread = new ServerThread(this);
+		serverThread.start();
 	}
 
 	private class UpdateThread extends Thread {

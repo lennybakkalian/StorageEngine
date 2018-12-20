@@ -1,6 +1,7 @@
 package storageengine;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 
@@ -11,9 +12,26 @@ public class StorageObject implements Serializable {
 
 	private static final long serialVersionUID = 1L;
 	private HashMap<String, Table> tables;
+	private ArrayList<StorageUser> users;
 
 	public StorageObject() {
 		tables = new HashMap<String, Table>();
+		users = new ArrayList<StorageUser>();
+	}
+
+	public void addUser(StorageUser user) {
+		users.add(user);
+	}
+
+	public void removeUser(StorageUser user) {
+		users.remove(user);
+	}
+
+	public StorageUser getUserByName(String username) {
+		for (StorageUser u : users)
+			if (u.getUsername().toLowerCase().equals(username.toLowerCase()))
+				return u;
+		return null;
 	}
 
 	public void addTable(String name, Table table) throws TableAlreadyExistException {

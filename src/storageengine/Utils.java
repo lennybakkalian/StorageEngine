@@ -1,8 +1,14 @@
 package storageengine;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 
 public class Utils {
+
+	private static final SecureRandom RANDOM = new SecureRandom();
+
 	public static String[] dynArrToFixedStrArr(ArrayList<String> arr) {
 		String[] fixedArr = new String[arr.size()];
 		for (int i = 0; i < arr.size(); i++)
@@ -27,5 +33,27 @@ public class Utils {
 		for (int i = 0; i < size; i++)
 			arr[i] = "";
 		return arr;
+	}
+
+	public static String md5(String str) {
+		try {
+			MessageDigest md = MessageDigest.getInstance("MD5");
+			byte[] array = md.digest(str.getBytes());
+			StringBuffer sb = new StringBuffer();
+			for (int i = 0; i < array.length; ++i) {
+				sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1, 3));
+			}
+			return sb.toString();
+		} catch (NoSuchAlgorithmException e) {
+		}
+		return null;
+	}
+
+	public static String randomString(int count) {
+		String ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < count; ++i)
+			sb.append(ALPHABET.charAt(RANDOM.nextInt(ALPHABET.length())));
+		return sb.toString();
 	}
 }

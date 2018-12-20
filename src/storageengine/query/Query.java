@@ -43,6 +43,7 @@ public class Query {
 				ArrayList<String[]> lastRemovedElements = null;
 				Condition lastCondition = null;
 				ArrayList<String[]> addTo = null;
+				// TODO: RECODE OR CLAUSE
 				for (ValuePair cp : qp.getWhereParts()) {
 					// all rows which are added because the 'OR' condition will saved in the addTo
 					// array and will be added after the next condition
