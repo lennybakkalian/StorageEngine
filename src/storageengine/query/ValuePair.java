@@ -3,10 +3,11 @@ package storageengine.query;
 import storageengine.exceptions.CompareException;
 import storageengine.query.QueryParser.Condition;
 
-public class ComparePair {
+public class ValuePair {
 
 	/*
-	 * This class store the table column name and the filter value with the next condition
+	 * This class store a key and the value with the compare type
+	 * the compare type will be always 'EQUAL' if its a SET clause
 	 */
 
 	public static enum CompareType {
@@ -19,7 +20,7 @@ public class ComparePair {
 	// the next condition
 	private Condition conditionAfter;
 
-	public ComparePair(CompareType type, String key, String value, Condition conditionAfter) {
+	public ValuePair(CompareType type, String key, String value, Condition conditionAfter) {
 		this.type = type;
 		this.key = key;
 		this.value = value;

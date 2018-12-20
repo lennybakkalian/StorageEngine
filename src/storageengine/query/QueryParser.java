@@ -1,41 +1,93 @@
 package storageengine.query;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
+import storageengine.Utils;
 import storageengine.exceptions.QueryParseException;
-import storageengine.query.ComparePair.CompareType;
 import storageengine.query.Query.QueryType;
+import storageengine.query.ValuePair.CompareType;
 
 public class QueryParser {
 
 	private String queryStr;
+	private ArrayList<ValuePair> whereParts;
+	private ArrayList<ValuePair> setParts;
+
+	public static enum Clause {
+		WHERE, SET, ORDER
+	}
 
 	public static enum Condition {
 		AND, OR
 	}
 
-	public QueryParser(String queryStr) {
+	public QueryParser(String queryStr) throws QueryParseException {
 		this.queryStr = queryStr;
+		this.whereParts = new ArrayList<ValuePair>();
+		this.setParts = new ArrayList<ValuePair>();
+		if (containsClause())
+			processQuery();
 	}
 
-	public boolean isWhereClause() {
+	public boolean containsClause() {
 		String[] qParts = queryStr.split(" ");
-		return qParts.length > 2 && qParts[2].equalsIgnoreCase("where");
+		if (qParts.length > 2) {
+			switch (qParts[2].toLowerCase()) {
+			case "where":
+			case "set":
+			case "order":
+				return true;
+			}
+		}
+		return false;
 	}
 
-	public ArrayList<ComparePair> getWhereParts() throws QueryParseException {
-		if (!isWhereClause())
-			throw new QueryParseException("cant parse 'where' parts, because query isnt a 'where' statement");
+	public ArrayList<ValuePair> getWhereParts() {
+		return whereParts;
+	}
+
+	public ArrayList<ValuePair> getSetParts() {
+		return setParts;
+	}
+
+	private void processQuery() throws QueryParseException {
+		whereParts.clear();
+		setParts.clear();
 		// read char for char to check if commas are in a string
-		ArrayList<ComparePair> whereParts = new ArrayList<ComparePair>();
-		String[] chars = queryStr.split(" ")[3].split("");
+		String fullString = Utils.mergeArr(queryStr, " ", 3);
+		String[] chars = fullString.split("");
 		boolean stringMode = false;
 		String currentKey = null, currentValue = null;
 		String splitStr = "";
 		CompareType currentCompareType = null;
 		Condition currentCondition = null;
+		// TODO: check if the currentClause really starts with WHERE
+		String[] qParts = queryStr.split(" ");
+		Clause currentClause = null;
+		if (qParts.length > 2) {
+			switch (qParts[2].toLowerCase()) {
+			case "where":
+				currentClause = Clause.WHERE;
+				break;
+			case "set":
+				currentClause = Clause.SET;
+				break;
+			case "order":
+				currentClause = Clause.ORDER;
+				break;
+			default:
+				throw new QueryParseException("invalid clause: " + qParts[2]);
+			}
+		}
+		Query q = parse();
 		for (int i = 0; i < chars.length; i++) {
 			String c = chars[i];
+			// check if currentClause is valid
+			if (currentClause == Clause.SET
+					&& (q.getQueryType() == QueryType.SELECT || q.getQueryType() == QueryType.DROP)) {
+				throw new QueryParseException("cant use 'set' in '" + q.getQueryType() + "' statement");
+			}
 			if (stringMode) {
 				// read string until splitStr without backslash
 				if (c.equals(splitStr)) {
@@ -49,10 +101,17 @@ public class QueryParser {
 						// end string mode
 						stringMode = false;
 						// save where part
-						ComparePair cp = new ComparePair(currentCompareType, currentKey, currentValue, null);
-						whereParts.add(cp);
-						// TODO: rem me
-						//System.out.println(currentCompareType + " : " + currentKey + " : " + currentValue);
+						ValuePair cp = new ValuePair(currentCompareType, currentKey, currentValue, null);
+						switch (currentClause) {
+						case WHERE:
+							whereParts.add(cp);
+							break;
+						case SET:
+							setParts.add(cp);
+							break;
+						case ORDER:
+							break;
+						}
 						currentKey = null;
 						currentValue = null;
 						// check if there is a next condition
@@ -66,13 +125,36 @@ public class QueryParser {
 						case "/":
 							currentCondition = Condition.OR;
 							break;
+						case " ":
+							// exit where or set clause and check for next one
+							String[] nextTokens = fullString.substring(i, fullString.length()).split(" ");
+							switch (nextTokens[1].toLowerCase()) {
+							case "set":
+								currentClause = Clause.SET;
+								break;
+							case "where":
+								currentClause = Clause.WHERE;
+								break;
+							case "order":
+								currentClause = Clause.ORDER;
+								break;
+							default:
+								throw new QueryParseException(
+										"invalid clause at " + fullString.substring(i, fullString.length())
+												+ " - please use one of these: 'set/where/order'");
+							}
+							// skip chars, so we dont have to read the clause again
+							// and add '1' because the whitespace
+							i += nextTokens[1].length() + 1;
+							break;
 						default:
 							// invalid char, throw parse exception
 							throw new QueryParseException(
 									"invalid condition after compare '" + chars[i + 1] + "' at: " + queryStr);
 						}
 						// update condition
-						cp.setConditionAfter(currentCondition);
+						if (currentClause == Clause.WHERE)
+							cp.setConditionAfter(currentCondition);
 						i++;
 					}
 				} else {
@@ -125,14 +207,13 @@ public class QueryParser {
 			else
 				throw new QueryParseException("expected " + splitStr + " to end the string from the key:" + currentKey
 						+ " value:" + currentValue);
-		return whereParts;
 	}
 
 	public Query parse() throws QueryParseException {
 		try {
 			String[] whitespaceArgs = queryStr.split(" ");
 			if (whitespaceArgs.length < 2)
-				throw new QueryParseException("not enough arguments");
+				throw new QueryParseException("not enough arguments (" + whitespaceArgs.length + ")");
 			QueryType queryType;
 			String tableName;
 			switch (whitespaceArgs[0].toLowerCase()) {
@@ -149,7 +230,7 @@ public class QueryParser {
 				queryType = QueryType.UPDATE;
 				break;
 			default:
-				throw new QueryParseException("please specify the type: select, insert or drop");
+				throw new QueryParseException("invalid type: " + whitespaceArgs[0] + " - please specify the type: select, insert, update or drop");
 			}
 
 			tableName = whitespaceArgs[1];

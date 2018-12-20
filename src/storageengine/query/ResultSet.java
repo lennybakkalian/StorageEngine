@@ -30,28 +30,21 @@ public class ResultSet {
 		this.result = result;
 	}
 
-	public ArrayList<String[]> filter(ComparePair cp) throws QueryExecuteException, QueryParseException {
+	public ArrayList<String[]> filter(ValuePair cp) throws QueryExecuteException, QueryParseException {
 		return filterArray(table, result, cp);
 	}
 
 	// STATIC STUFF
 
-	public static ArrayList<String[]> filterArray(Table table, ArrayList<String[]> result, ComparePair cp)
+	public static ArrayList<String[]> filterArray(Table table, ArrayList<String[]> result, ValuePair cp)
 			throws QueryExecuteException, QueryParseException {
 		ArrayList<String[]> removedElements = new ArrayList<String[]>();
-		int columnIndex = getColumnIndex(table, cp.getKey());
+		int columnIndex = table.getColumnIndex(cp.getKey());
 		for (int i = result.size() - 1; i >= 0; i--)
 			if (!cp.compare(result.get(i)[columnIndex])) {
 				removedElements.add(result.get(i));
 				result.remove(i);
 			}
 		return removedElements;
-	}
-
-	public static int getColumnIndex(Table table, String columnName) throws QueryExecuteException {
-		for (int i = 0; i < table.getColumn().length; i++)
-			if (table.getColumn()[i].equalsIgnoreCase(columnName))
-				return i;
-		throw new QueryExecuteException("column '" + columnName + "' doesnt exist");
 	}
 }

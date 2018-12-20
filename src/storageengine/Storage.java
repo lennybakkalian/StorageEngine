@@ -20,6 +20,7 @@ public class Storage {
 	private StorageObject storageObject;
 	private boolean open = false;
 	private UpdateThread updateThread;
+	public boolean debug = false;
 
 	public Storage(File f) throws Exception {
 		this.f = f;
@@ -46,18 +47,21 @@ public class Storage {
 	}
 
 	public void load() throws Exception {
+		debug("load database... " + f.getPath());
 		FileInputStream fis = new FileInputStream(f);
 		ObjectInputStream ois = new ObjectInputStream(fis);
 		storageObject = (StorageObject) ois.readObject();
 		ois.close();
+		debug("loaded!");
 	}
 
 	public void save() throws Exception {
-		System.out.println("save");
+		debug("save database... " + f.getPath());
 		FileOutputStream fos = new FileOutputStream(f);
 		ObjectOutputStream oos = new ObjectOutputStream(fos);
 		oos.writeObject(storageObject);
 		oos.close();
+		debug("saved!");
 	}
 
 	public static Storage create(File f) throws Exception {
@@ -69,6 +73,11 @@ public class Storage {
 		oos.writeObject(so);
 		oos.close();
 		return new Storage(f);
+	}
+
+	public void debug(String msg) {
+		if (debug)
+			System.out.println("[DEBUG] " + msg);
 	}
 
 	private class UpdateThread extends Thread {

@@ -24,6 +24,8 @@ public class Main {
 			} else {
 				s = Storage.create(soFile);
 			}
+			
+			s.debug = true;
 
 			// create table if not exist
 			if (!s.getStorageObject().tableExist("users")) {
